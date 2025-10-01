@@ -1,0 +1,54 @@
+name: Test & Publish package
+
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  REPOSITORY_NAME: "itsdani-local"
+  REPOSITORY_URL: "https://us-east1-python.pkg.dev/home-automation-213900/itsdani-local/"
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      # Set up the build environment
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.8.22"
+          enable-cache: true
+      # Log into google cloud
+      - name: Authenticate to google cloud
+        uses: google-github-actions/auth@v2
+        id: auth
+        with:
+          token_format: access_token
+          project_id: home-automation-213900
+          workload_identity_provider: projects/600470555909/locations/global/workloadIdentityPools/github-actions-identity-pool/providers/github-actions
+          service_account: github-actions@home-automation-213900.iam.gserviceaccount.com
+      # Install, test and build the package
+      - name: Install the project
+        run: uv sync --locked --all-extras --dev
+      - name: Run tests
+        run: uv run pytest tests
+      - name: Build and publish the package
+        run: |
+          PACKAGE_VERSION=${GITHUB_REF#refs/tags/v}
+          uv version $PACKAGE_VERSION
+          uv build
+          uv publish dist/* \
+            --username oauth2accesstoken \
+            --password ${{ steps.auth.outputs.access_token }} \
+            --publish-url $REPOSITORY_URL

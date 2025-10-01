@@ -1,0 +1,25 @@
+name: 'log in to google'
+
+on:
+  workflow_dispatch:
+
+jobs:
+  job_id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to google cloud
+        uses: google-github-actions/auth@v2
+        id: auth
+        with:
+          token_format: access_token
+          project_id: home-automation-213900
+          workload_identity_provider: projects/600470555909/locations/global/workloadIdentityPools/github-actions-identity-pool/providers/github-actions
+          service_account: github-actions@home-automation-213900.iam.gserviceaccount.com
+
